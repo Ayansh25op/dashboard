@@ -1,0 +1,230 @@
+<!-- Full updated HTML -->
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Smart Desk Display</title>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      margin: 0;
+      font-family: "Helvetica Neue", sans-serif;
+      background-color: #111;
+      color: #eee;
+      height: 100vh;
+      display: flex;
+      flex-direction: row;
+    }
+
+    .left, .right {
+      flex: 1;
+      padding: 2em;
+      box-sizing: border-box;
+    }
+
+    .left {
+      border-right: 1px solid #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .right {
+      display: flex;
+      flex-direction: column;
+    }
+
+    #time {
+      font-size: 2.5em;
+    }
+
+    #date {
+      font-size: 1.3em;
+      margin-bottom: 1em;
+    }
+
+    #weather {
+      margin-top: 1em;
+      font-size: 1.2em;
+      text-align: center;
+    }
+
+    #quote {
+      margin-top: 2em;
+      font-style: italic;
+      max-width: 80%;
+      text-align: center;
+    }
+
+    h2 {
+      font-size: 1.5em;
+      margin-bottom: 0.5em;
+    }
+
+    .todo-item {
+      background-color: #222;
+      padding: 0.7em 1em;
+      margin: 0.4em 0;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      transition: opacity 0.5s ease-out;
+    }
+
+    .todo-item label {
+      flex-grow: 1;
+      margin-left: 0.8em;
+      font-size: 1.1em;
+    }
+
+    .fade-out {
+      opacity: 0;
+    }
+
+    input[type="checkbox"] {
+      transform: scale(1.4);
+    }
+
+    #new-task {
+      margin-top: 1em;
+      display: flex;
+      gap: 0.5em;
+    }
+
+    #task-input {
+      flex-grow: 1;
+      padding: 0.5em;
+      font-size: 1em;
+      border-radius: 5px;
+      border: none;
+    }
+
+    #add-task {
+      padding: 0.5em 1em;
+      background-color: #444;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #add-task:hover {
+      background-color: #666;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="left">
+    <div id="date"></div>
+    <div id="time"></div>
+    <div id="weather">Loading weather...</div>
+    <div id="quote"></div>
+  </div>
+
+  <div class="right">
+    <h2>📋 To-Do List</h2>
+    <div id="todo-list"></div>
+
+    <div id="new-task">
+      <input type="text" id="task-input" placeholder="New task...">
+      <button id="add-task">Add</button>
+    </div>
+  </div>
+
+  <script>
+    // Time and Date
+    function updateTime() {
+      const now = new Date();
+      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      document.getElementById('date').textContent = now.toLocaleDateString(undefined, options);
+      document.getElementById('time').textContent = now.toLocaleTimeString();
+    }
+    setInterval(updateTime, 1000);
+    updateTime();
+
+    // Quote
+    const quotes = [
+      "Believe you can and you're halfway there.",
+      "Stay hungry, stay foolish.",
+      "Don’t watch the clock; do what it does. Keep going.",
+      "Success is the sum of small efforts repeated daily.",
+      "Dream big. Start small. Act now."
+    ];
+    document.getElementById('quote').textContent = quotes[Math.floor(Math.random() * quotes.length)];
+
+    // Weather
+    const apiKey = 'b175c5438df3b85bdfe5e96b56da0666';
+    const city = 'Gandhinagar';
+    fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&appid=${apiKey}`)
+      .then(response => response.json())
+      .then(data => {
+        const temp = data.main.temp.toFixed(1);
+        const desc = data.weather[0].description;
+        const icon = data.weather[0].icon;
+        const iconUrl = `https://openweathermap.org/img/wn/${icon}@2x.png`;
+	document.getElementById('weather').innerHTML = `
+  	🌤 ${city}: <strong>${temp}°C</strong>, ${desc}
+	`;
+
+      })
+      .catch(err => {
+        document.getElementById('weather').textContent = "Weather unavailable (offline)";
+      });
+
+    // To-Do Logic
+    const todoList = document.getElementById('todo-list');
+    const input = document.getElementById('task-input');
+    const addBtn = document.getElementById('add-task');
+
+    function saveTasks(tasks) {
+      localStorage.setItem('tasks', JSON.stringify(tasks));
+    }
+
+    function loadTasks() {
+      const saved = localStorage.getItem('tasks');
+      return saved ? JSON.parse(saved) : ["Read 1 chapter", "Study 30 mins", "Take a break"];
+    }
+
+    function renderTasks() {
+      todoList.innerHTML = '';
+      const tasks = loadTasks();
+      tasks.forEach(taskText => {
+        const div = document.createElement('div');
+        div.className = 'todo-item';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        const label = document.createElement('label');
+        label.textContent = taskText;
+        div.appendChild(checkbox);
+        div.appendChild(label);
+        todoList.appendChild(div);
+
+        checkbox.addEventListener('change', () => {
+          if (checkbox.checked) {
+            div.classList.add('fade-out');
+            setTimeout(() => {
+              div.remove();
+              const remaining = loadTasks().filter(t => t !== taskText);
+              saveTasks(remaining);
+            }, 700);
+          }
+        });
+      });
+    }
+
+    addBtn.addEventListener('click', () => {
+      const task = input.value.trim();
+      if (task) {
+        const tasks = loadTasks();
+        tasks.push(task);
+        saveTasks(tasks);
+        input.value = '';
+        renderTasks();
+      }
+    });
+
+    renderTasks();
+  </script>
+
+</body>
+</html>
